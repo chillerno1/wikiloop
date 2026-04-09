@@ -1,0 +1,140 @@
+# Knowledge Base Schema
+
+## Identity
+This is a personal operational knowledge base about {{TOPIC}}.
+Maintained by an LLM agent. The human curates sources, writes task briefs, and makes judgment calls. The agent reads sources, compiles the wiki, proposes plans from the wiki, pairs on execution, and reconciles experience back into the wiki.
+
+This KB is not just a research brain. It is the control plane for how work gets done on this topic. The wiki proposes, the human executes, the wiki learns.
+
+## Privacy
+- This KB may contain internal and/or sensitive information. Never write anything to `raw/`, `wiki/`, `tasks/`, or `outputs/` that the human has not explicitly provided or explicitly requested.
+- Never fabricate details about systems, people, processes, credentials, or data. If the wiki cannot answer a question, say so — do not guess from general knowledge about "how companies usually do X."
+- Never commit secrets, credentials, API keys, tokens, connection strings, or PII to any file. If a source contains secrets, stop and tell the human to redact before ingesting.
+- Flag aggressively when wiki content may be stale. Ownership and process claims in particular should be treated as volatile.
+
+## Architecture
+- `raw/` contains immutable source documents. NEVER modify files in `raw/`. This includes both curated reading material (docs, READMEs, meeting notes) and captured experience (retros, post-mortems, "what actually happened" notes).
+- `wiki/` contains the compiled wiki. The agent owns this directory entirely.
+- `outputs/` contains generated reports, briefings, and saved query answers.
+- `tasks/` contains active and completed work. Each task is a folder. See the Task Workflow section.
+- `prompts/` contains the prompt library. Read these when the human references a prompt by filename.
+
+## Wiki Conventions
+- Every topic gets its own `.md` file in `wiki/`.
+- Every wiki file starts with YAML frontmatter:
+  ```
+  ---
+  title: [Topic Name]
+  created: [YYYY-MM-DD]
+  last_updated: [YYYY-MM-DD]
+  source_count: [Number of raw sources that informed this page]
+  status: [draft | reviewed | needs_update]
+  staleness_risk: [low | medium | high]
+  ---
+  ```
+- After frontmatter, a one-paragraph summary.
+- Use `[[topic-name]]` for internal links between wiki pages.
+- Every factual claim cites its source: `[Source: filename.md]`. No exceptions.
+- When new info contradicts existing content, flag explicitly and **preserve the old claim**:
+  > CONTRADICTION: [old claim] [Source: old-source.md] vs [new claim] [Source: new-source.md]. Reason: [why the old claim is now wrong, with date if known].
+- Never delete a contradicted claim. Layer corrections on top so the history survives.
+
+## Index and Log
+- `wiki/index.md` lists every page with a one-line description, grouped by category.
+- `wiki/log.md` is an append-only chronological record.
+- Log entry format: `## [YYYY-MM-DD] action | Description`
+  - Actions: `ingest`, `query`, `lint`, `update`, `plan`, `execute`, `retro`, `reconcile`
+
+## Ingest Workflow
+When processing a new source from `raw/`:
+1. Read the full source document.
+2. Discuss 3–5 key takeaways with the human and wait for confirmation.
+3. Create or update a summary page in `wiki/` for the source itself.
+4. Update `wiki/index.md`.
+5. Update ALL relevant entity and concept pages across the wiki.
+6. Add backlinks from existing pages to new content.
+7. Flag any contradictions with existing wiki content.
+8. Append an entry to `wiki/log.md`.
+9. A single source should touch roughly 10–15 wiki pages.
+
+## Query Workflow
+When answering a question:
+1. Read `wiki/index.md` first.
+2. Read all relevant wiki pages.
+3. Synthesize an answer grounded entirely in wiki content. Cite every claim.
+4. If the wiki cannot answer, say so explicitly and name what source would fill the gap. Do not fabricate.
+5. If the answer reveals new connections worth preserving, offer to file it back into `wiki/` or `outputs/`.
+
+## Task Workflow
+The operational loop. Every piece of work on this topic flows through these five steps.
+
+### 1. Brief
+The human writes `tasks/<date>-<slug>/task.md` by hand. The brief must state:
+- **Goal** — what done looks like, in one paragraph
+- **Constraints** — what must / must not happen (downtime, dependencies, deadlines)
+- **Acceptance criteria** — the checklist that proves it's done
+- **Context** — pointers to relevant wiki pages, if the human already knows them
+
+The agent does not write the brief. The brief is the human's judgment about what the task is.
+
+### 2. Plan
+The agent reads `task.md`, then reads `wiki/index.md` and every wiki page relevant to the task. It produces `tasks/<date>-<slug>/plan.md` with:
+- Numbered steps
+- Every step cites the wiki page(s) it is based on with `[Source: page-name]`
+- Steps without a wiki basis are flagged: `> NO WIKI BASIS — verify manually before executing`
+- A top-3 risks section at the end
+- A list of wiki pages that would need to be updated if the plan reveals them to be wrong
+
+Append a `plan` entry to `wiki/log.md`.
+
+### 3. Execute
+The agent and human pair on the actual work, logging to `tasks/<date>-<slug>/execution.md` as they go. The execution log is timestamped and structured:
+```
+## <HH:MM> — <step description>
+<what was attempted>
+→ <what happened>
+→ <decision or next action>
+```
+When reality diverges from the plan, flag inline:
+- `> WIKI GAP: <what the wiki did not know>`
+- `> CONTRADICTS WIKI: <page>: <what the wiki said vs. what is true>`
+- `> NEW KNOWLEDGE: <something learned that should be captured>`
+
+Artifacts produced during execution (manifests, diffs, configs, screenshots) go in `tasks/<date>-<slug>/artifacts/`.
+
+Append an `execute` entry to `wiki/log.md` when the task is complete or abandoned.
+
+### 4. Retro
+When execution ends (success, failure, or abandonment), the agent reads `task.md`, `plan.md`, and `execution.md`, and writes `tasks/<date>-<slug>/retro.md`:
+1. What went as planned
+2. Where reality diverged
+3. Every WIKI GAP / CONTRADICTS WIKI / NEW KNOWLEDGE marker, with the actual answer
+4. Proposed wiki updates — do not apply them yet, just propose
+5. Proposed new wiki pages — same, just propose
+
+The human reviews the retro and approves / rejects each proposed change.
+
+### 5. Reconcile
+After the human approves the retro:
+1. Copy `retro.md` to `raw/retro-<slug>-<date>.md`. This makes it an immutable experience source.
+2. Run the reconciliation ingest (see `prompts/reconcile.md`).
+3. Apply approved wiki updates: layer corrections on existing pages with `> CONTRADICTION:` callouts, create new pages for NEW KNOWLEDGE, update `wiki/index.md`.
+4. Append a `reconcile` entry to `wiki/log.md`.
+
+The retro source stays in `raw/` forever. The task folder can be moved to `tasks/archive/` or left in place — markdown is cheap.
+
+## Lint Workflow (Monthly)
+Check for:
+- Contradictions between pages that are not yet flagged
+- Stale claims superseded by newer sources or retros
+- Orphan pages with no inbound links
+- Concepts mentioned but never explained
+- Missing cross-references
+- Claims without source attribution
+- Pages with `staleness_risk: high` that have not been updated in >30 days
+- Retro-sourced claims that disagree with still-active curated sources (and no contradiction flag exists)
+
+Output: `wiki/lint-report-<YYYY-MM-DD>.md` with severity levels (🔴 errors, 🟡 warnings, 🔵 info) and 3 suggested sources to fill the biggest gaps.
+
+## Focus Areas
+{{FOCUS_AREAS}}
