@@ -1,8 +1,27 @@
-# Operational KB
+# wikiloop
 
-An extension of the Karpathy-style personal knowledge base method, designed for **operational work** — not just research. The vault isn't just memory; it's the control plane for how work happens. The wiki proposes, you execute, the wiki learns.
+**Turn an LLM into a second brain that learns from what you actually do — not just what you read.**
 
-Plain markdown, plain folders, one bash script. No database, no embeddings, no vector store. Works with any agent that can read and write files in a directory.
+Drop sources into `raw/`. An AI agent builds a cross-referenced wiki in `wiki/` with citations. When you start a task, the agent plans from the wiki, pairs with you on execution, logs what actually happened, writes a retro, and files corrections back into the wiki. Next task, the plan is better. The wiki gets monotonically more accurate because every contradiction between docs and reality is captured, dated, and preserved.
+
+Plain markdown. One bash script. No database, no embeddings, no vector store. Works with Claude Code, Cursor, or any agent that can read and write files in a directory.
+
+## Quick start
+
+```bash
+git clone https://github.com/chillerno1/wikiloop
+cd wikiloop
+./spawn.sh ~/my-vault "what this KB is about" "focus area 1" "focus area 2"
+```
+
+Then drop your first source into `~/my-vault/raw/` and point your agent at `prompts/ingest.md`. Once the wiki has a few sources, start your first task:
+
+```bash
+cd ~/my-vault
+cp -R tasks/_template tasks/$(date +%Y-%m-%d)-<slug>
+```
+
+Walk through `prompts/task-brief.md` → `task-plan.md` → `task-execute.md` → `task-retro.md`. The last step reconciles what you learned back into the wiki.
 
 ## Background
 
@@ -10,7 +29,7 @@ Andrej Karpathy's personal knowledge base method treats a folder of markdown fil
 
 That method is **read-optimized**: ingest sources, build wiki, query wiki, get answers. Great for research.
 
-This project adds a fourth directory — `tasks/` — and a loop that turns knowledge into action and action back into knowledge. The wiki doesn't just accumulate what you've read; it accumulates what you've *done*, and what reality taught you when the docs were wrong.
+wikiloop adds a fourth directory — `tasks/` — and a loop that turns knowledge into action and action back into knowledge. The wiki doesn't just accumulate what you've read; it accumulates what you've *done*, and what reality taught you when the docs were wrong.
 
 ## The operational loop
 
@@ -52,34 +71,10 @@ Three properties make this work:
 2. **Experience is a first-class source.** Retros live in `raw/` alongside curated reading material. They're dated, immutable, and cited just like any other source.
 3. **The human writes the brief.** The agent doesn't decide what the task is. It plans, pairs, scribes, and proposes — but the judgment about *what* to do and *whether* the result is acceptable stays with the human.
 
-## Quick start
-
-```bash
-git clone <this-repo> kb-skeleton
-cd kb-skeleton
-./spawn.sh ~/my-vault "what this KB is about" "focus area 1" "focus area 2" "focus area 3"
-```
-
-This creates a new vault with the full directory structure, a filled-in `CLAUDE.md`, the prompt library, a task template, an initial `wiki/log.md`, and a fresh git repo.
-
-From there:
-
-```bash
-cd ~/my-vault
-```
-
-Open it in an AI coding assistant that can read and write files in the directory. Drop your first source into `raw/` and point the agent at `prompts/ingest.md`. Once the wiki has enough content to be useful (5–10 sources), start your first task:
-
-```bash
-cp -R tasks/_template tasks/$(date +%Y-%m-%d)-<slug>
-```
-
-Then walk through `prompts/task-brief.md` → `prompts/task-plan.md` → `prompts/task-execute.md` → `prompts/task-retro.md`.
-
 ## Structure
 
 ```
-kb-skeleton/
+wikiloop/
 ├── README.md                     this file
 ├── CLAUDE.md.template            schema with task workflow, privacy rules, reconcile loop
 ├── spawn.sh                      creates a new self-contained vault
@@ -123,7 +118,7 @@ Each spawned vault is fully self-contained. `spawn.sh` copies prompts into the v
 
 ## What's different from a vanilla research KB
 
-| | Research KB | Operational KB |
+| | Research KB | wikiloop |
 |---|---|---|
 | Directories | `raw/ wiki/ outputs/` | + `tasks/` |
 | Agent's role | Librarian | Librarian + pair partner + scribe |

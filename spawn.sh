@@ -52,7 +52,7 @@ echo "→ writing wiki/log.md"
 cat > "$TARGET/wiki/log.md" <<EOF
 # Log
 
-## [$TODAY] update | Operational knowledge base created from operational-kb-skeleton. Topic: $TOPIC.
+## [$TODAY] update | Vault created from wikiloop. Topic: $TOPIC.
 EOF
 
 echo "→ writing wiki/index.md"
@@ -63,7 +63,7 @@ _No pages yet. Ingest your first source in `raw/` or run your first task in `tas
 EOF
 
 echo "→ git init"
-(cd "$TARGET" && git init -q && git add -A && git -c commit.gpgsign=false commit -q -m "Initial vault from operational-kb-skeleton")
+(cd "$TARGET" && git init -q && git add -A && git -c commit.gpgsign=false commit -q -m "Initial vault from wikiloop")
 
 echo
 echo "✓ vault ready at $TARGET"
