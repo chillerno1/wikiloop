@@ -81,6 +81,7 @@ wikiloop/
 ├── prompts/
 │   ├── ingest.md                 single-source ingest
 │   ├── ingest-multiple.md        sequential multi-source ingest
+│   ├── ingest-codebase.md        structured codebase summarization + ingest
 │   ├── query.md                  grounded question answering
 │   ├── explore.md                surface unexplored connections
 │   ├── brief.md                  generate a structured briefing from the wiki
